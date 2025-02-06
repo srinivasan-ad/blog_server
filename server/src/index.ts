@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors'
+import bcrypt from 'bcrypt';
+import { Jwt } from 'jsonwebtoken';
 import dotenv from 'dotenv'; 
 dotenv.config();
 import {Pool} from 'pg'
@@ -35,9 +37,10 @@ const {name,username,password} = req.body
             return res.status(400).json({ success : false , exist : true , mssg : 'Username is used'});
         }
         else{
-        
+            const saltRounds = 10; 
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
             const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) ON CONFLICT(username) DO NOTHING  RETURNING * ;';
-            const insertQueryResult = await pool.query(insertQuery, [name, username, password]);
+            const insertQueryResult = await pool.query(insertQuery, [name, username, hashedPassword]);
             if(insertQueryResult.rowCount === 0)
             {
                 console.log('Query insertion failed !');
@@ -61,14 +64,13 @@ app.post('/user/signin', async(req,res) : Promise<any>  =>  {
         {
             return res.status(404).json({mssg : 'Username is incorrect'})
         }
-        else if(password != selectQueryResult.rows[0].password)
+        const hashedPassword = selectQueryResult.rows[0].password;
+        const isValidPass = await bcrypt.compare(password, hashedPassword);
+        if(!isValidPass)
         {
             return res.status(405).json({mssg : 'Password is incorrect'}) 
         }
-        else
-        {
             return res.status(201).json({mssg : 'Login is successful'})  
-        }
     }
     catch(e)
     {
