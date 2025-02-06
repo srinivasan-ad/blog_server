@@ -64,7 +64,7 @@ const {name,username,password} = req.body
     }
 });
 app.post('/user/signin', async(req,res) : Promise<any>  =>  {
-    const{username,password} = req.body
+    const{username,password} = req.body //
     try{
         const selectQuery = 'SELECT * FROM Users WHERE username = $1 ;'
         const selectQueryResult = await pool.query(selectQuery , [username])
