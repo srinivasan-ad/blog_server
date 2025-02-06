@@ -7,17 +7,6 @@ const app : express.Application = express();
 app.use(cors());
 app.use(express.json());
 const pool = new Pool({connectionString : process.env.DATABASE_URL})
-async function connectDB() {
-    const client = await pool.connect()
-    try {
-      console.log("Connected to database")
-      return client
-    } catch (error) {
-      console.error("Database connection failed", error)
-
-    }
-  }
-
   const client = pool.connect()
   .then(client => {
       console.log("Connected to database");
