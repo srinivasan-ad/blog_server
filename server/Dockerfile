@@ -11,6 +11,8 @@ RUN npm install --omit=dev
 
 COPY . .
 
+COPY .env .env
+
 
 RUN npm run build
 
