@@ -11,47 +11,48 @@ app.use(cookieParser())
 app.use(cors());
 app.use(express.json());
 const pool = new Pool({connectionString : process.env.DATABASE_URL})
-  const client = pool.connect()
-  .then(client => {
-      console.log("Connected to database");
-      client.release();
-  })
-  .catch(err => console.error("Database connection failed", err));
+//   const client = pool.connect()
+//   .then(client => {
+//       console.log("Connected to database");
+//       client.release();
+//   })
+//   .catch(err => console.error("Database connection failed", err));
+
+
   async function CheckTokenValidity(req: any, res: any, next: any): Promise<any> {
     const token = req.cookies?.authToken;
 
     if (!token) {
-        return res.status(401).json({ isValid: false, mssg: "No token provided!" });
+        return res.status(401).json({ isValid: false, message: "No token provided!" });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { id: number };
 
-        const selectQuery = 'SELECT * FROM Users WHERE username = $1;';
-        const result = await pool.query(selectQuery, [decoded.username]);
+        const result = await pool.query('SELECT id FROM Users WHERE id = $1;', [decoded.id]);
 
         if (result.rows.length === 0) {
-            return res.status(401).json({ isValid: false, mssg: "Invalid token!" });
+            return res.status(401).json({ isValid: false, message: "Invalid token!" });
         }
 
-        return next(); 
+        req.body.userId = decoded.id; 
+        return next();
     } catch (e) {
         console.error("JWT Error:", e);
-        return res.status(401).json({ isValid: false, mssg: "Token expired or invalid!" });
+        return res.status(401).json({ isValid: false, message: "Token expired or invalid!" });
     }
 }
 
-app.get('/hello'  , (req,res) => {
-    try{
-         res.send("Hello champ !")
-    }
-    catch(e)
-    {
+app.get('/hello', (req, res) => {
+    try {
+        res.send("Hello champ!");
+    } catch (e) {
         console.error(e);
     }
-})
+});
 
-app.get('/user/validate', async (req, res) : Promise<any> => {
+
+app.get('/user/validate', async (req, res)  : Promise<any> => {
     const token = req.cookies?.authToken;
 
     if (!token) {
@@ -59,8 +60,8 @@ app.get('/user/validate', async (req, res) : Promise<any> => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
-        const result = await pool.query('SELECT * FROM Users WHERE username = $1;', [decoded.username]);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { id: number };
+        const result = await pool.query('SELECT * FROM Users WHERE id = $1;', [decoded.id]);
 
         if (result.rows.length === 0) {
             return res.status(401).json({ isValid: false, message: "Invalid token" });
@@ -72,105 +73,155 @@ app.get('/user/validate', async (req, res) : Promise<any> => {
     }
 });
 
-app.post('/user/signup', async (req , res ) : Promise<any> => {
 
-const {name,username,password} = req.body
+app.post('/user/signup', async (req, res) : Promise<any> => {
+    const { name, username, password } = req.body;
 
     try {
-        const selectQuery = `Select * FROM Users WHERE username = $1 ;`;
-        const selectResult = await pool.query(selectQuery,[username]);
-        if(selectResult.rows.length > 0)
-        {
-            return res.status(400).json({ success : false , exist : true , mssg : 'Username is used'});
+        const selectResult = await pool.query('SELECT * FROM Users WHERE username = $1;', [username]);
+
+        if (selectResult.rows.length > 0) {
+            return res.status(400).json({ success: false, exist: true, message: 'Username is already taken' });
         }
-        else{
-            const saltRounds = 10; 
-            const hashedPassword = await bcrypt.hash(password, saltRounds);
-            const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) ON CONFLICT(username) DO NOTHING  RETURNING * ;';
-            const insertQueryResult = await pool.query(insertQuery, [name, username, hashedPassword]);
-            if(insertQueryResult.rowCount === 0)
-            {
-                console.log('Query insertion failed !');
-              return res.status(401).json({success : false , exist : false , mssg  : 'Insertion failed' } )
-            }
-            let token = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string , { expiresIn: "2m" });
-            res.cookie("authToken", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', 
-                maxAge:  2 * 60 * 1000
-            });
-        return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'})
-        
-    }
-       
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) RETURNING id;';
+        const insertResult = await pool.query(insertQuery, [name, username, hashedPassword]);
+
+        if (insertResult.rowCount === 0) {
+            return res.status(401).json({ success: false, message: 'User registration failed' });
+        }
+
+        const token = jwt.sign({ id: insertResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "2m" });
+
+        res.cookie("authToken", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 2 * 60 * 1000
+        });
+
+        return res.status(200).json({ success: true, message: 'User registered successfully' });
     } catch (e) {
         console.error(e);
         return res.status(500).json({ success: false, error: "Internal Server Error" });
     }
 });
-app.post('/user/signin',async(req,res) : Promise<any>  =>  {
-    const{username,password} = req.body 
-    
-    try{
-        const selectQuery = 'SELECT * FROM Users WHERE username = $1 ;'
-        const selectQueryResult = await pool.query(selectQuery , [username])
-        if(selectQueryResult.rows.length === 0)
-        {
-            return res.status(404).json({mssg : 'Username is incorrect'})
+
+
+app.post('/user/signin', async (req, res) : Promise<any> => {
+    const { username, password } = req.body;
+
+    try {
+        const selectResult = await pool.query('SELECT * FROM Users WHERE username = $1;', [username]);
+
+        if (selectResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Username is incorrect' });
         }
-        const hashedPassword = selectQueryResult.rows[0].password;
+
+        const hashedPassword = selectResult.rows[0].password;
         const isValidPass = await bcrypt.compare(password, hashedPassword);
-        if(!isValidPass)
-        {
-            return res.status(405).json({mssg : 'Password is incorrect'}) 
+
+        if (!isValidPass) {
+            return res.status(405).json({ message: 'Password is incorrect' });
         }
-        const newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string , { expiresIn: "2m" });
-        res.cookie("authToken", newToken, {
+
+        const token = jwt.sign({ id: selectResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "2m" });
+
+        res.cookie("authToken", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', 
-            maxAge:  2 * 60 * 1000
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 2 * 60 * 1000
         });
-        return res.status(200).json({mssg : 'Logged in successfully'})
-    }
-    catch(e)
-    {
-        console.error(e)
-        return res.status(500).json({mssg : "Internal Server Error" });
-    }
-})
-app.post('/user/blog' , CheckTokenValidity , (req,res) : Promise<any> => {
-    
-})
-app.put('/user/blog' , CheckTokenValidity, (req,res) => {
-    try{
-          res.send("Blog entry route")
-    }
-    catch(e)
-    {
+
+        return res.status(200).json({ message: 'Logged in successfully' });
+    } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal Server Error" });
     }
-})
+});
 
-app.get('/user/blog' , (req,res) => {
-    try{
-         res.send("All blog get route")
-    }
-    catch(e)
-    {
-        console.error(e)
-    }
-})
 
-app.get('/user/blog/getblog' , (req,res) => {
-    try
-    {
-         res.send("Specific blog get route")
+app.post('/user/blog', CheckTokenValidity, async (req, res) : Promise<any> => {
+    const { title, content, published } = req.body;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const insertQuery = 'INSERT INTO Blogs (author_id, title, content, published) VALUES ($1, $2, $3, $4) RETURNING *;';
+        const insertResult = await client.query(insertQuery, [req.body.userId, title, content, published]);
+
+        await client.query('COMMIT');
+
+        return res.status(201).json({ success: true, message: "Blog posted successfully", blog: insertResult.rows[0] });
+
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.error(e);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    } finally {
+        client.release();
     }
-    catch(e)
-    {
-        console.error(e)
+});
+
+
+app.put('/user/blog', CheckTokenValidity, async (req, res) : Promise<any>  => {
+    const { title, content, blogId } = req.body;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const checkResult = await client.query('SELECT * FROM Blogs WHERE id = $1 AND author_id = $2;', [blogId, req.body.userId]);
+
+        if (checkResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: "Blog not found or unauthorized." });
+        }
+
+        const updateQuery = 'UPDATE Blogs SET title = $1, content = $2 WHERE id = $3 RETURNING *;';
+        const updateResult = await client.query(updateQuery, [title, content, blogId]);
+
+        await client.query('COMMIT');
+
+        return res.status(200).json({ success: true, message: "Blog updated successfully", blog: updateResult.rows[0] });
+
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.error("Error updating blog:", e);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    } finally {
+        client.release();
     }
-})
+});
+
+app.get('/user/blog', async (req, res) : Promise<any> => {
+    try {
+        const result = await pool.query('SELECT * FROM Blogs ORDER BY created_at DESC;');
+        return res.status(200).json({ success: true, blogs: result.rows });
+    } catch (e) {
+        console.error("Error fetching all blogs:", e);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.get('/user/blog/:id', async (req, res) : Promise<any> => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('SELECT * FROM Blogs WHERE id = $1;', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Blog not found" });
+        }
+
+        return res.status(200).json({ success: true, blog: result.rows[0] });
+    } catch (e) {
+        console.error("Error fetching blog:", e);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
 app.listen(process.env.PORT,() => 
 {
     console.log(`Server ntarted at http://localhost:${process.env.PORT}`);
