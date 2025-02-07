@@ -22,15 +22,14 @@ async function CheckTokenValidity(req : any ,res : any ,next : any) : Promise<an
 {
 const token =   req.cookies?.authToken;
 try{
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
     const selectQuery = 'SELECT * FROM Users WHERE username = $1;'
-    const result = await pool.query(selectQuery,[decoded]);
+    const result = await pool.query(selectQuery,[decoded.username]);
     if(result.rows.length === 0)
     {
         return res.status(404).json({isValid : false , mssg : "token has expired !"})
     }
     next();
-    return res.status(202).json({isValid : true , mssg : "token is valid !"})
 
 }
 catch(e)
@@ -72,11 +71,12 @@ const {name,username,password} = req.body
               return res.status(401).json({success : false , exist : false , mssg  : 'Insertion failed' } )
             }
             let token = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
-        return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'}).cookie("authToken", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', 
-            maxAge: 3 * 24 * 60 * 60 * 1000
-        });
+            res.cookie("authToken", token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', 
+                maxAge: 3 * 24 * 60 * 60 * 1000
+            });
+        return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'})
         
     }
        
@@ -91,7 +91,7 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
     try{
         if(token)
             {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };;
+                const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
                 const tokenSelectQuery = 'SELECT * FROM Users WHERE username = $1;'
                 const result = await pool.query(tokenSelectQuery,[decoded.username]);
                 if(result.rows.length > 0)
@@ -113,11 +113,12 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
             return res.status(405).json({mssg : 'Password is incorrect'}) 
         }
         const newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
-        return res.status(200).json({mssg : 'Logged in successfully'}).cookie("authToken", newToken, {
+        res.cookie("authToken", newToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production', 
             maxAge: 3 * 24 * 60 * 60 * 1000
         });
+        return res.status(200).json({mssg : 'Logged in successfully'})
     }
     catch(e)
     {
