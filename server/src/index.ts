@@ -112,8 +112,8 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
         {
             return res.status(405).json({mssg : 'Password is incorrect'}) 
         }
-        let newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
-        return res.status(200).json({mssg : 'Logged in successfully'}).cookie("authToken", token, {
+        const newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
+        return res.status(200).json({mssg : 'Logged in successfully'}).cookie("authToken", newToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production', 
             maxAge: 3 * 24 * 60 * 60 * 1000
