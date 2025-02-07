@@ -195,7 +195,7 @@ app.put('/user/blog', CheckTokenValidity, async (req, res) : Promise<any>  => {
     }
 });
 
-app.get('/user/blog', async (req, res) : Promise<any> => {
+app.get('/user/blog',CheckTokenValidity ,  async (req, res) : Promise<any> => {
     try {
         const result = await pool.query('SELECT * FROM Blogs ORDER BY created_at DESC;');
         return res.status(200).json({ success: true, blogs: result.rows });
@@ -205,7 +205,7 @@ app.get('/user/blog', async (req, res) : Promise<any> => {
     }
 });
 
-app.get('/user/blog/:id', async (req, res) : Promise<any> => {
+app.get('/user/blog/:id',CheckTokenValidity ,  async (req, res) : Promise<any> => {
     const { id } = req.params;
 
     try {
