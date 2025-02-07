@@ -17,7 +17,6 @@ const pool = new Pool({connectionString : process.env.DATABASE_URL})
       client.release();
   })
   .catch(err => console.error("Database connection failed", err));
-
   async function CheckTokenValidity(req: any, res: any, next: any): Promise<any> {
     const token = req.cookies?.authToken;
 
@@ -139,7 +138,9 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
         return res.status(500).json({mssg : "Internal Server Error" });
     }
 })
-
+app.post('/user/blog' , CheckTokenValidity , (req,res) : Promise<any> => {
+    
+})
 app.put('/user/blog' , CheckTokenValidity, (req,res) => {
     try{
           res.send("Blog entry route")
