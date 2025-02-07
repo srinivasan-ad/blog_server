@@ -18,25 +18,28 @@ const pool = new Pool({connectionString : process.env.DATABASE_URL})
   })
   .catch(err => console.error("Database connection failed", err));
 
-async function CheckTokenValidity(req : any ,res : any ,next : any) : Promise<any>
-{
-const token =   req.cookies?.authToken;
-try{
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
-    const selectQuery = 'SELECT * FROM Users WHERE username = $1;'
-    const result = await pool.query(selectQuery,[decoded.username]);
-    if(result.rows.length === 0)
-    {
-        return res.status(404).json({isValid : false , mssg : "token has expired !"})
-    }
-    next();
+  async function CheckTokenValidity(req: any, res: any, next: any): Promise<any> {
+    const token = req.cookies?.authToken;
 
-}
-catch(e)
-{
-    console.error(e);
-    return res.status(500).json({mssg : "Internal Server Error"})
-}
+    if (!token) {
+        return res.status(401).json({ isValid: false, mssg: "No token provided!" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
+
+        const selectQuery = 'SELECT * FROM Users WHERE username = $1;';
+        const result = await pool.query(selectQuery, [decoded.username]);
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ isValid: false, mssg: "Invalid token!" });
+        }
+
+        return next(); 
+    } catch (e) {
+        console.error("JWT Error:", e);
+        return res.status(401).json({ isValid: false, mssg: "Token expired or invalid!" });
+    }
 }
 
 app.get('/hello'  , (req,res) => {
@@ -48,6 +51,27 @@ app.get('/hello'  , (req,res) => {
         console.error(e);
     }
 })
+
+app.get('/user/validate', async (req, res) : Promise<any> => {
+    const token = req.cookies?.authToken;
+
+    if (!token) {
+        return res.status(401).json({ isValid: false, message: "No token provided" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
+        const result = await pool.query('SELECT * FROM Users WHERE username = $1;', [decoded.username]);
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ isValid: false, message: "Invalid token" });
+        }
+
+        return res.status(200).json({ isValid: true, user: result.rows[0] });
+    } catch (error) {
+        return res.status(401).json({ isValid: false, message: "Token expired or invalid" });
+    }
+});
 
 app.post('/user/signup', async (req , res ) : Promise<any> => {
 
@@ -70,11 +94,11 @@ const {name,username,password} = req.body
                 console.log('Query insertion failed !');
               return res.status(401).json({success : false , exist : false , mssg  : 'Insertion failed' } )
             }
-            let token = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
+            let token = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string , { expiresIn: "2m" });
             res.cookie("authToken", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production', 
-                maxAge: 3 * 24 * 60 * 60 * 1000
+                maxAge:  2 * 60 * 1000
             });
         return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'})
         
@@ -87,19 +111,8 @@ const {name,username,password} = req.body
 });
 app.post('/user/signin',async(req,res) : Promise<any>  =>  {
     const{username,password} = req.body 
-    const token =   req.cookies?.authToken;
+    
     try{
-        if(token)
-            {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as jwt.JwtPayload & { username: string };
-                const tokenSelectQuery = 'SELECT * FROM Users WHERE username = $1;'
-                const result = await pool.query(tokenSelectQuery,[decoded.username]);
-                if(result.rows.length > 0)
-                {
-                    return res.status(210).json({isValid : true , mssg : "token is valid !"})
-                }
-            
-            }
         const selectQuery = 'SELECT * FROM Users WHERE username = $1 ;'
         const selectQueryResult = await pool.query(selectQuery , [username])
         if(selectQueryResult.rows.length === 0)
@@ -112,11 +125,11 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
         {
             return res.status(405).json({mssg : 'Password is incorrect'}) 
         }
-        const newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string);
+        const newToken = jwt.sign({ username: username }, process.env.JWT_SECRET_KEY as string , { expiresIn: "2m" });
         res.cookie("authToken", newToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production', 
-            maxAge: 3 * 24 * 60 * 60 * 1000
+            maxAge:  2 * 60 * 1000
         });
         return res.status(200).json({mssg : 'Logged in successfully'})
     }
@@ -127,7 +140,7 @@ app.post('/user/signin',async(req,res) : Promise<any>  =>  {
     }
 })
 
-app.put('/user/blog' , (req,res) => {
+app.put('/user/blog' , CheckTokenValidity, (req,res) => {
     try{
           res.send("Blog entry route")
     }
