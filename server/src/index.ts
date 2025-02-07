@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors'
 import bcrypt from 'bcrypt';
-import { Jwt } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv'; 
 dotenv.config();
 import {Pool} from 'pg'
@@ -46,7 +46,12 @@ const {name,username,password} = req.body
                 console.log('Query insertion failed !');
               return res.status(400).json({success : false , exist : false , mssg  : 'Insertion failed' } )
             }
-        return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'})
+            let token = jwt.sign({ username: username }, process.env.JWT_SECRET_Key as string);
+        return res.status(200).json({success : true , exist : false , mssg : 'Info inserted successfully'}).cookie("authToken", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', 
+            maxAge: 3 * 24 * 60 * 60 * 1000
+        });
         
     }
        
