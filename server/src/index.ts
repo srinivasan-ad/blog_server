@@ -7,8 +7,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 import {Pool} from 'pg'
 const app : express.Application = express();
+app.use(
+    cors({
+      origin: "http://localhost:3000", 
+      credentials: true,
+    })
+  );
 app.use(cookieParser())
-app.use(cors());
+
 app.use(express.json());
 const pool = new Pool({connectionString : process.env.DATABASE_URL})
 //   const client = pool.connect()
