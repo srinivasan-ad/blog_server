@@ -197,13 +197,14 @@ app.put('/user/blog', CheckTokenValidity, async (req, res) : Promise<any>  => {
 
 app.get('/user/blog', CheckTokenValidity, async (req, res): Promise<any> => {
     const { page } = req.query;
-    const pageSize = 4; 
+    const pageSize = 4;
     const pageNumber = parseInt(page as string) || 1;
     const offset = (pageNumber - 1) * pageSize;
   
     try {
       const result = await pool.query(
-        `SELECT Blogs.*, Users.name AS author_name 
+        `SELECT Blogs.id, Blogs.title, Blogs.content, Blogs.published, Blogs.created_at, 
+                Users.name AS author_name
          FROM Blogs 
          JOIN Users ON Blogs.author_id = Users.id 
          ORDER BY Blogs.created_at DESC 
@@ -213,7 +214,7 @@ app.get('/user/blog', CheckTokenValidity, async (req, res): Promise<any> => {
   
       return res.status(200).json({ blogs: result.rows });
     } catch (e) {
-      console.error("Error fetching all blogs:", e);
+      console.error("Error fetching all blogs:", e)
       return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   });
