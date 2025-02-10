@@ -158,9 +158,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
 app.post('/user/blog', async (req, res): Promise<any> => {
     const { title, content, published, userId } = req.body;
     const client = await pool.connect();
-    if (!title || !content || typeof published !== "boolean" || !userId) {
-        return res.status(400).json({ success: false, message: "Missing required fields." });
-      }
+  
       
     try {
         const checkUser = await client.query('SELECT id FROM Users WHERE id = $1;', [userId]);
@@ -260,6 +258,36 @@ app.get('/user/blog/:id', async (req, res) : Promise<any> => {
         return res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
+app.get('/user/:userId/blogs', async (req, res): Promise<any> => {
+  const { userId } = req.params;
+  const { page } = req.query;
+  const pageSize = 5;
+  const pageNumber = parseInt(page as string) || 1;
+  const offset = (pageNumber - 1) * pageSize;
+
+  try {
+    const result = await pool.query(
+      `SELECT Blogs.id, Blogs.title, substring(Blogs.content from 1 for 100) AS content, 
+              Blogs.published, Blogs.created_at, Users.name AS author_name 
+       FROM Blogs 
+       JOIN Users ON Blogs.author_id = Users.id 
+       WHERE Users.id = $1
+       ORDER BY Blogs.created_at DESC
+       LIMIT $2 OFFSET $3;`,
+      [userId, pageSize, offset]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No blogs found for this user" });
+    }
+
+    return res.status(200).json({ blogs: result.rows });
+  } catch (error) {
+    console.error("Error fetching user's blogs:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
+
 
 app.listen(process.env.PORT,() => 
 {
