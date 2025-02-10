@@ -233,13 +233,19 @@ app.get('/user/blog/:id', async (req, res) : Promise<any> => {
     const { id } = req.params;
 
     try {
-        const result = await pool.query('SELECT * FROM Blogs WHERE id = $1;', [id]);
+        const selectQuery = `SELECT Blogs.id, Blogs.title, 
+       Blogs.content, Blogs.published, Blogs.created_at, 
+       Users.name AS author_nameFROM Blogs JOIN 
+       Users ON Blogs.author_id = Users.id
+       WHERE Blogs.id = $1;`
+
+        const result = await pool.query(selectQuery, [id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: "Blog not found" });
         }
 
-        return res.status(200).json({ success: true, blog: result.rows[0] });
+        return res.status(200).json({blog: result.rows[0] });
     } catch (e) {
         console.error("Error fetching blog:", e);
         return res.status(500).json({ success: false, message: "Internal Server Error" });
