@@ -98,7 +98,7 @@ app.post('/user/signup', async (req, res) : Promise<any> => {
             return res.status(401).json({ success: false, message: 'User registration failed' });
         }
 
-        const token = jwt.sign({ id: insertResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "2m" });
+        const token = jwt.sign({ id: insertResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
 
         res.cookie("authToken", token, {
             httpOnly: true,
@@ -131,7 +131,7 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
             return res.status(405).json({ message: 'Password is incorrect' });
         }
 
-        const token = jwt.sign({ id: selectResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "2m" });
+        const token = jwt.sign({ id: selectResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
 
         res.cookie("authToken", token, {
             httpOnly: true,
