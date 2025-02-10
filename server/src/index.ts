@@ -80,75 +80,79 @@ app.get('/user/validate', async (req, res)  : Promise<any> => {
 });
 
 
-app.post('/user/signup', async (req, res) : Promise<any> => {
+app.post('/user/signup', async (req, res): Promise<any> => {
     const { name, username, password } = req.body;
-
+  
     try {
-        const selectResult = await pool.query('SELECT * FROM Users WHERE username = $1;', [username]);
-
-        if (selectResult.rows.length > 0) {
-            return res.status(400).json({ success: false, exist: true, message: 'Username is already taken' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) RETURNING id;';
-        const insertResult = await pool.query(insertQuery, [name, username, hashedPassword]);
-
-        if (insertResult.rowCount === 0) {
-            return res.status(401).json({ success: false, message: 'User registration failed' });
-        }
-
-        const token = jwt.sign({ id: insertResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
-
-        res.cookie("authToken", token, {
-            httpOnly: true,
-            secure:false,
-            sameSite : 'lax',
-            maxAge: 5 * 60 * 1000
-        });
-
-        return res.status(200).json({ success: true, message: 'User registered successfully' });
+      const selectResult = await pool.query('SELECT * FROM Users WHERE username = $1;', [username]);
+  
+      if (selectResult.rows.length > 0) {
+        return res.status(400).json({ success: false, exist: true, message: 'Username is already taken' });
+      }
+  
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) RETURNING id;';
+      const insertResult = await pool.query(insertQuery, [name, username, hashedPassword]);
+  
+      if (insertResult.rowCount === 0) {
+        return res.status(401).json({ success: false, message: 'User registration failed' });
+      }
+  
+      const userId = insertResult.rows[0].id;
+  
+      const token = jwt.sign({ id: userId }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
+  
+      res.cookie("authToken", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 5 * 60 * 1000,
+      });
+  
+      return res.status(200).json({ id: userId });
     } catch (e) {
-        console.error(e);
-        return res.status(500).json({ success: false, error: "Internal Server Error" });
+      console.error(e);
+      return res.status(500).json({ success: false, error: "Internal Server Error" });
     }
+  });
+  
+app.post('/user/signin', async (req, res): Promise<any> => {
+  const { username, password } = req.body;
+
+  try {
+    const selectResult = await pool.query('SELECT id, password FROM Users WHERE username = $1;', [username]);
+
+    if (selectResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Username is incorrect' });
+    }
+
+    const userId = selectResult.rows[0].id;
+    const hashedPassword = selectResult.rows[0].password;
+    const isValidPass = await bcrypt.compare(password, hashedPassword);
+
+    if (!isValidPass) {
+      return res.status(405).json({ message: 'Password is incorrect' });
+    }
+
+    const token = jwt.sign({ id: userId }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      domain: "localhost",
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 5 * 60 * 1000,
+    });
+
+    console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
+
+    return res.status(200).json({id: userId });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
-
-app.post('/user/signin', async (req, res) : Promise<any> => {
-    const { username, password } = req.body;
-
-    try {
-        const selectResult = await pool.query('SELECT * FROM Users WHERE username = $1;', [username]);
-
-        if (selectResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Username is incorrect' });
-        }
-
-        const hashedPassword = selectResult.rows[0].password;
-        const isValidPass = await bcrypt.compare(password, hashedPassword);
-
-        if (!isValidPass) {
-            return res.status(405).json({ message: 'Password is incorrect' });
-        }
-
-        const token = jwt.sign({ id: selectResult.rows[0].id }, process.env.JWT_SECRET_KEY as string, { expiresIn: "5m" });
-
-        res.cookie("authToken", token, {
-            httpOnly: true,
-            domain: "localhost",
-            secure: false,
-            sameSite : 'lax',
-            maxAge: 5 * 60 * 1000
-        });
-        console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
-
-        return res.status(200).json({ message: 'Logged in successfully' });
-    } catch (e) {
-        console.error(e);
-        return res.status(500).json({ message: "Internal Server Error" });
-    }
-});
 
 
 app.post('/user/blog', async (req, res): Promise<any> => {
@@ -212,7 +216,7 @@ app.post('/user/blog', async (req, res): Promise<any> => {
 
 app.get('/user/blog',  async (req, res): Promise<any> => {
     const { page } = req.query;
-    const pageSize = 4;
+    const pageSize = 5;
     const pageNumber = parseInt(page as string) || 1;
     const offset = (pageNumber - 1) * pageSize;
   
