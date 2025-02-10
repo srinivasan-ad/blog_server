@@ -205,7 +205,7 @@ app.put('/user/blog',  async (req, res) : Promise<any>  => {
     }
 });
 
-app.get('/user/blog',  async (req, res): Promise<any> => {
+app.get('/user/blog',CheckTokenValidity , async (req, res): Promise<any> => {
     const { page } = req.query;
     const pageSize = 4;
     const pageNumber = parseInt(page as string) || 1;
