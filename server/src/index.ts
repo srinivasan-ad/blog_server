@@ -151,7 +151,7 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
 });
 
 
-app.post('/user/blog', CheckTokenValidity, async (req, res) : Promise<any> => {
+app.post('/user/blog',  async (req, res) : Promise<any> => {
     const { title, content, published } = req.body;
     const client = await pool.connect();
 
@@ -175,7 +175,7 @@ app.post('/user/blog', CheckTokenValidity, async (req, res) : Promise<any> => {
 });
 
 
-app.put('/user/blog', CheckTokenValidity, async (req, res) : Promise<any>  => {
+app.put('/user/blog',  async (req, res) : Promise<any>  => {
     const { title, content, blogId } = req.body;
     const client = await pool.connect();
 
@@ -205,7 +205,7 @@ app.put('/user/blog', CheckTokenValidity, async (req, res) : Promise<any>  => {
     }
 });
 
-app.get('/user/blog', CheckTokenValidity, async (req, res): Promise<any> => {
+app.get('/user/blog',  async (req, res): Promise<any> => {
     const { page } = req.query;
     const pageSize = 4;
     const pageNumber = parseInt(page as string) || 1;
@@ -229,7 +229,7 @@ app.get('/user/blog', CheckTokenValidity, async (req, res): Promise<any> => {
     }
   });
   
-app.get('/user/blog/:id',CheckTokenValidity ,  async (req, res) : Promise<any> => {
+app.get('/user/blog/:id', async (req, res) : Promise<any> => {
     const { id } = req.params;
 
     try {
