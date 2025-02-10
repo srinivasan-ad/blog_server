@@ -213,7 +213,7 @@ app.get('/user/blog',  async (req, res): Promise<any> => {
   
     try {
       const result = await pool.query(
-        `SELECT Blogs.id, Blogs.title, Blogs.content, Blogs.published, Blogs.created_at, 
+        `SELECT Blogs.id, Blogs.title, substring(Blogs.content from 1 for 100) AS content, Blogs.published, Blogs.created_at, 
                 Users.name AS author_name
          FROM Blogs 
          JOIN Users ON Blogs.author_id = Users.id 
