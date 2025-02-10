@@ -214,7 +214,7 @@ app.post('/user/blog', async (req, res): Promise<any> => {
 
 app.get('/user/blog',  async (req, res): Promise<any> => {
     const { page } = req.query;
-    const pageSize = 5;
+    const pageSize = 4;
     const pageNumber = parseInt(page as string) || 1;
     const offset = (pageNumber - 1) * pageSize;
   
@@ -261,7 +261,7 @@ app.get('/user/blog/:id', async (req, res) : Promise<any> => {
 app.get('/user/:userId/blogs', async (req, res): Promise<any> => {
   const { userId } = req.params;
   const { page } = req.query;
-  const pageSize = 5;
+  const pageSize = 4;
   const pageNumber = parseInt(page as string) || 1;
   const offset = (pageNumber - 1) * pageSize;
 
