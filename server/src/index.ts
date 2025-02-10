@@ -103,6 +103,7 @@ app.post('/user/signup', async (req, res) : Promise<any> => {
         res.cookie("authToken", token, {
             httpOnly: true,
             secure:false,
+            sameSite : 'lax',
             maxAge: 5 * 60 * 1000
         });
 
@@ -138,6 +139,7 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
             secure: false,
             maxAge: 5 * 60 * 1000
         });
+        console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
 
         return res.status(200).json({ message: 'Logged in successfully' });
     } catch (e) {
