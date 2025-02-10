@@ -235,7 +235,7 @@ app.get('/user/blog/:id', async (req, res) : Promise<any> => {
     try {
         const selectQuery = `SELECT Blogs.id, Blogs.title, 
        Blogs.content, Blogs.published, Blogs.created_at, 
-       Users.name AS author_nameFROM Blogs JOIN 
+       Users.name AS author_name FROM Blogs JOIN 
        Users ON Blogs.author_id = Users.id
        WHERE Blogs.id = $1;`
 
