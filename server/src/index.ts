@@ -136,7 +136,9 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
 
         res.cookie("authToken", token, {
             httpOnly: true,
+            domain: "localhost",
             secure: false,
+            sameSite : 'lax',
             maxAge: 5 * 60 * 1000
         });
         console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
