@@ -171,7 +171,7 @@ app.post('/user/blog', async (req, res): Promise<any> => {
       
         await client.query('COMMIT');
       
-        return res.status(201).json({ blog: insertResult.rows[0] });
+        return res.status(201).json({ id: insertResult.rows[0].id });
       } catch (e) {
         await client.query('ROLLBACK');
         console.error("Error posting blog:", e);
