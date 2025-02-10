@@ -151,29 +151,38 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
 });
 
 
-app.post('/user/blog',  async (req, res) : Promise<any> => {
-    const { title, content, published } = req.body;
+app.post('/user/blog', async (req, res): Promise<any> => {
+    const { title, content, published, username } = req.body;
     const client = await pool.connect();
-
+  
     try {
-        await client.query('BEGIN');
-
-        const insertQuery = 'INSERT INTO Blogs (author_id, title, content, published) VALUES ($1, $2, $3, $4) RETURNING *;';
-        const insertResult = await client.query(insertQuery, [req.body.userId, title, content, published]);
-
-        await client.query('COMMIT');
-
-        return res.status(201).json({ success: true, message: "Blog posted successfully", blog: insertResult.rows[0] });
-
-    } catch (e) {
+      await client.query('BEGIN');
+      const selectQuery = 'SELECT id FROM Users WHERE username = $1;';
+      const selectResult = await client.query(selectQuery, [username]);
+  
+      if (selectResult.rows.length === 0) {
         await client.query('ROLLBACK');
-        console.error(e);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+  
+      const userId = selectResult.rows[0].id;
+  
+      const insertQuery = 'INSERT INTO Blogs (author_id, title, content, published) VALUES ($1, $2, $3, $4) RETURNING *;';
+      const insertResult = await client.query(insertQuery, [userId, title, content, published]);
+  
+      await client.query('COMMIT');
+  
+      return res.status(201).json({blog: insertResult.rows[0] });
+  
+    } catch (e) {
+      await client.query('ROLLBACK');
+      console.error(e);
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
     } finally {
-        client.release();
+      client.release();
     }
-});
-
+  });
+  
 
 app.put('/user/blog',  async (req, res) : Promise<any>  => {
     const { title, content, blogId } = req.body;
@@ -194,7 +203,7 @@ app.put('/user/blog',  async (req, res) : Promise<any>  => {
 
         await client.query('COMMIT');
 
-        return res.status(200).json({ success: true, message: "Blog updated successfully", blog: updateResult.rows[0] });
+        return res.status(200).json({blog: updateResult.rows[0] });
 
     } catch (e) {
         await client.query('ROLLBACK');
@@ -229,28 +238,36 @@ app.get('/user/blog',  async (req, res): Promise<any> => {
     }
   });
   
-app.get('/user/blog/:id', async (req, res) : Promise<any> => {
-    const { id } = req.params;
-
+  app.put('/user/blog', async (req, res): Promise<any> => {
+    const { title, content, blogId, userId } = req.body;
+    const client = await pool.connect();
     try {
-        const selectQuery = `SELECT Blogs.id, Blogs.title, 
-       Blogs.content, Blogs.published, Blogs.created_at, 
-       Users.name AS author_name FROM Blogs JOIN 
-       Users ON Blogs.author_id = Users.id
-       WHERE Blogs.id = $1;`
-
-        const result = await pool.query(selectQuery, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: "Blog not found" });
-        }
-
-        return res.status(200).json({blog: result.rows[0] });
+      await client.query('BEGIN');
+      const checkResult = await client.query(
+        'SELECT * FROM Blogs WHERE id = $1 AND author_id = $2;',
+        [blogId, userId]
+      );
+  
+      if (checkResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ success: false, message: "Blog not found or unauthorized." });
+      }
+      const updateQuery = 'UPDATE Blogs SET title = $1, content = $2 WHERE id = $3 RETURNING *;';
+      const updateResult = await client.query(updateQuery, [title, content, blogId]);
+  
+      await client.query('COMMIT');
+  
+      return res.status(200).json({blog: updateResult.rows[0] });
+  
     } catch (e) {
-        console.error("Error fetching blog:", e);
-        return res.status(500).json({ success: false, message: "Internal Server Error" });
+      await client.query('ROLLBACK');
+      console.error("Error updating blog:", e);
+      return res.status(500).json({ success: false, message: "Internal Server Error" });
+    } finally {
+      client.release();
     }
-});
+  });
+  
 
 app.listen(process.env.PORT,() => 
 {
