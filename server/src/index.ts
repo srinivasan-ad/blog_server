@@ -154,24 +154,29 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
 app.post('/user/blog', async (req, res): Promise<any> => {
     const { title, content, published, userId } = req.body;
     const client = await pool.connect();
-  
+    if (!title || !content || typeof published !== "boolean" || !userId) {
+        return res.status(400).json({ success: false, message: "Missing required fields." });
+      }
+      
     try {
-      await client.query('BEGIN')
-      const insertQuery = 'INSERT INTO Blogs (author_id, title, content, published) VALUES ($1, $2, $3, $4) RETURNING *;';
-      const insertResult = await client.query(insertQuery, [userId, title, content, published]);
-  
-      await client.query('COMMIT');
-  
-      return res.status(201).json({blog: insertResult.rows[0] });
-  
-    } catch (e) {
-      await client.query('ROLLBACK');
-      console.error(e);
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
-    } finally {
-      client.release();
-    }
-  });
+        const checkUser = await client.query('SELECT id FROM Users WHERE id = $1;', [userId]);
+        if (checkUser.rows.length === 0) {
+          return res.status(404).json({ success: false, message: "User not found." });
+        }
+      
+        await client.query('BEGIN');
+        
+        const insertQuery = 'INSERT INTO Blogs (author_id, title, content, published) VALUES ($1, $2, $3, $4) RETURNING id;';
+        const insertResult = await client.query(insertQuery, [userId, title, content, published]);
+      
+        await client.query('COMMIT');
+      
+        return res.status(201).json({ blog: insertResult.rows[0] });
+      } catch (e) {
+        await client.query('ROLLBACK');
+        console.error("Error posting blog:", e);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+      }})
   
 
   app.put('/user/blog', async (req, res): Promise<any> => {
