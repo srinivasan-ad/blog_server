@@ -102,8 +102,8 @@ app.post('/user/signup', async (req, res) : Promise<any> => {
 
         res.cookie("authToken", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 2 * 60 * 1000
+            secure:false,
+            maxAge: 5 * 60 * 1000
         });
 
         return res.status(200).json({ success: true, message: 'User registered successfully' });
@@ -135,8 +135,8 @@ app.post('/user/signin', async (req, res) : Promise<any> => {
 
         res.cookie("authToken", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 2 * 60 * 1000
+            secure: false,
+            maxAge: 5 * 60 * 1000
         });
 
         return res.status(200).json({ message: 'Logged in successfully' });
