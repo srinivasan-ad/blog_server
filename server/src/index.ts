@@ -8,14 +8,13 @@ dotenv.config();
 import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
-    cors({
-      origin: "https://www.verbser.tech",
-      methods: 'GET, HEAD, PUT, PATCH, POST, DELETE',
-
-      credentials: true,
-      optionsSuccessStatus: 20
-    })
-  );
+  cors({
+    origin: 'https://www.verbser.tech', // Allow your frontend origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // If using cookies or credentials
+  })
+);
 app.use(cookieParser())
 
 app.use(express.json());
@@ -51,6 +50,7 @@ const pool = new Pool({connectionString : process.env.DATABASE_URL})
         return res.status(401).json({ isValid: false, message: "Token expired or invalid!" });
     }
 }
+app.options('*', cors());
 
 app.get('/hello', (req, res) => {
     try {
@@ -80,21 +80,6 @@ app.get('/user/validate', async (req, res)  : Promise<any> => {
     } catch (error) {
         return res.status(401).json({ isValid: false, message: "Token expired or invalid" });
     }
-});
-// Example with Express.js
-app.options('/user/signin', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://www.verbser.tech'); // or '*' for all origins (less secure)
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers your client might send
-  res.setHeader('Access-Control-Allow-Credentials', 'true'); // if you are handling cookies.
-  res.status(200).send();
-});// Example with Express.js
-app.options('/user/signin', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://www.verbser.tech'); // or '*' for all origins (less secure)
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers your client might send
-  res.setHeader('Access-Control-Allow-Credentials', 'true'); // if you are handling cookies.
-  res.status(200).send();
 });
 
 app.post('/user/signup', async (req, res): Promise<any> => {
