@@ -9,6 +9,7 @@ import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
   cors({
+
     origin: 'https://www.verbser.tech', 
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -106,7 +107,7 @@ app.post('/user/signup', async (req, res): Promise<any> => {
   
       res.cookie("authToken", token, {
         httpOnly: true,
-        secure: true,
+        secure: false,
         maxAge: 5 * 60 * 1000,
       });
   
@@ -140,7 +141,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
 
     res.cookie("authToken", token, {
       httpOnly: true,
-      secure: true,
+      secure: false,
       maxAge: 5 * 60 * 1000,
     });
 
@@ -224,6 +225,7 @@ app.get('/user/blog',  async (req, res): Promise<any> => {
                 Users.name AS author_name
          FROM Blogs 
          JOIN Users ON Blogs.author_id = Users.id 
+         WHERE BLOGS.published = true
          ORDER BY Blogs.created_at DESC 
          LIMIT $1 OFFSET $2;`,
         [pageSize, offset]
@@ -271,7 +273,7 @@ app.get('/user/:userId/blogs', async (req, res): Promise<any> => {
               Blogs.published, Blogs.created_at, Users.name AS author_name 
        FROM Blogs 
        JOIN Users ON Blogs.author_id = Users.id 
-       WHERE Users.id = $1
+       WHERE Users.id = $1 AND Blogs.published = true
        ORDER BY Blogs.created_at DESC
        LIMIT $2 OFFSET $3;`,
       [userId, pageSize, offset]
@@ -287,6 +289,37 @@ app.get('/user/:userId/blogs', async (req, res): Promise<any> => {
     return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
+app.get('/user/:userId/drafts', async (req, res): Promise<any> => {
+  const { userId } = req.params;
+  const { page } = req.query;
+  const pageSize = 4;
+  const pageNumber = parseInt(page as string) || 1;
+  const offset = (pageNumber - 1) * pageSize;
+
+  try {
+    const result = await pool.query(
+      `SELECT Blogs.id, Blogs.title, substring(Blogs.content from 1 for 100) AS content, 
+              Blogs.published, Blogs.created_at, Users.name AS author_name 
+       FROM Blogs 
+       JOIN Users ON Blogs.author_id = Users.id 
+       WHERE Users.id = $1 AND Blogs.published = false
+       ORDER BY Blogs.created_at DESC
+       LIMIT $2 OFFSET $3;`,
+      [userId, pageSize, offset]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No blogs found for this user" });
+    }
+
+    return res.status(200).json({ blogs: result.rows });
+  } catch (error) {
+    console.error("Error fetching user's blogs:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
+
+
 
 
 app.listen(process.env.PORT,() => 
