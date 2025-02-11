@@ -107,8 +107,7 @@ app.post('/user/signup', async (req, res): Promise<any> => {
   
       res.cookie("authToken", token, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: true,
         maxAge: 5 * 60 * 1000,
       });
   
@@ -141,9 +140,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
 
     res.cookie("authToken", token, {
       httpOnly: true,
-      domain: "localhost",
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
       maxAge: 5 * 60 * 1000,
     });
 
