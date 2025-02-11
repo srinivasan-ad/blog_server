@@ -9,7 +9,7 @@ import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
     cors({
-      origin: "http://localhost:3000", 
+      origin: "https://verbser.tech", 
       credentials: true,
     })
   );
