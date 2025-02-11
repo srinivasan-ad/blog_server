@@ -9,10 +9,10 @@ import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
   cors({
-    origin: 'https://www.verbser.tech', // Allow your frontend origin
+    origin: 'https://www.verbser.tech', 
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // If using cookies or credentials
+    credentials: true, 
   })
 );
 app.use(cookieParser())
