@@ -9,7 +9,7 @@ import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
     cors({
-      origin: "https://verbser.tech", 
+      origin: "https://blog-client-cey4wrwoa-srinivasanads-projects.vercel.app/", 
       credentials: true,
     })
   );
