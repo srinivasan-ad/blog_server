@@ -110,7 +110,7 @@ app.post('/user/signup', async (req, res): Promise<any> => {
         maxAge: 5 * 60 * 1000,
       });
   
-      return res.status(200).json({ id: userId });
+      return res.status(200).json({ id: userId, name : name });
     } catch (e) {
       console.error(e);
       return res.status(500).json({ success: false, error: "Internal Server Error" });
@@ -130,7 +130,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
     const userId = selectResult.rows[0].id;
     const hashedPassword = selectResult.rows[0].password;
     const isValidPass = await bcrypt.compare(password, hashedPassword);
-    const name= selectResult.rows[0].name;
+    const Uname= selectResult.rows[0].name;
 
     if (!isValidPass) {
       return res.status(405).json({ message: 'Password is incorrect' });
@@ -146,7 +146,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
 
     console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
 
-    return res.status(200).json({id: userId , name: name});
+    return res.status(200).json({id: userId , name: Uname});
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Internal Server Error" });
