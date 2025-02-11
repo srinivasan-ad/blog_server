@@ -81,7 +81,21 @@ app.get('/user/validate', async (req, res)  : Promise<any> => {
         return res.status(401).json({ isValid: false, message: "Token expired or invalid" });
     }
 });
-
+// Example with Express.js
+app.options('/user/signin', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://www.verbser.tech'); // or '*' for all origins (less secure)
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers your client might send
+  res.setHeader('Access-Control-Allow-Credentials', 'true'); // if you are handling cookies.
+  res.status(200).send();
+});// Example with Express.js
+app.options('/user/signin', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://www.verbser.tech'); // or '*' for all origins (less secure)
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers your client might send
+  res.setHeader('Access-Control-Allow-Credentials', 'true'); // if you are handling cookies.
+  res.status(200).send();
+});
 
 app.post('/user/signup', async (req, res): Promise<any> => {
     const { name, username, password } = req.body;
