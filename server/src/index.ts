@@ -93,7 +93,7 @@ app.post('/user/signup', async (req, res): Promise<any> => {
       }
   
       const hashedPassword = await bcrypt.hash(password, 10);
-      const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) RETURNING id;';
+      const insertQuery = 'INSERT INTO Users(name, username, password) VALUES($1, $2, $3) RETURNING id,name;';
       const insertResult = await pool.query(insertQuery, [name, username, hashedPassword]);
   
       if (insertResult.rowCount === 0) {
@@ -121,7 +121,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
   const { username, password } = req.body;
 
   try {
-    const selectResult = await pool.query('SELECT id, password FROM Users WHERE username = $1;', [username]);
+    const selectResult = await pool.query('SELECT id, password, name FROM Users WHERE username = $1;', [username]);
 
     if (selectResult.rows.length === 0) {
       return res.status(404).json({ message: 'Username is incorrect' });
@@ -130,6 +130,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
     const userId = selectResult.rows[0].id;
     const hashedPassword = selectResult.rows[0].password;
     const isValidPass = await bcrypt.compare(password, hashedPassword);
+    const name= selectResult.rows[0].name;
 
     if (!isValidPass) {
       return res.status(405).json({ message: 'Password is incorrect' });
@@ -145,7 +146,7 @@ app.post('/user/signin', async (req, res): Promise<any> => {
 
     console.log('Set-Cookie Header Sent:', res.getHeaders()['set-cookie']);
 
-    return res.status(200).json({id: userId });
+    return res.status(200).json({id: userId , name: name});
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: "Internal Server Error" });
