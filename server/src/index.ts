@@ -9,8 +9,11 @@ import {Pool} from 'pg'
 const app : express.Application = express();
 app.use(
     cors({
-      origin: "https://blog-client-cey4wrwoa-srinivasanads-projects.vercel.app/", 
+      origin: "https://verbser.tech",
+      methods: 'GET, HEAD, PUT, PATCH, POST, DELETE',
+
       credentials: true,
+      optionsSuccessStatus: 20
     })
   );
 app.use(cookieParser())
